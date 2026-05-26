@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#16a34a">
+  <title>NutriTrack</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SETUP WIZARD
+═══════════════════════════════════════════ -->
+<div id="setup-wizard" class="hidden">
+  <div class="wizard-container">
+    <div class="wizard-logo">
+      <div class="logo-icon">🥗</div>
+      <h1>NutriTrack</h1>
+      <p>Tu asistente personal de nutrición</p>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="wizard-step" id="step-1">
+      <h2>¡Hola! ¿Cómo te llamás?</h2>
+      <div class="form-group">
+        <input type="text" id="w-nombre" placeholder="Tu nombre" class="input-large">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sexo</label>
+          <select id="w-sexo" class="input-large">
+            <option value="m">Masculino</option>
+            <option value="f">Femenino</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Edad</label>
+          <input type="number" id="w-edad" placeholder="Años" class="input-large" min="10" max="100">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="wizardNext(2)">Continuar →</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="wizard-step hidden" id="step-2">
+      <h2>Tus medidas actuales</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Altura (cm)</label>
+          <input type="number" id="w-altura" placeholder="170" class="input-large" min="100" max="250">
+        </div>
+        <div class="form-group">
+          <label>Peso actual (kg)</label>
+          <input type="number" id="w-peso" placeholder="75" class="input-large" min="30" max="300" step="0.1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Peso objetivo (kg)</label>
+        <input type="number" id="w-peso-obj" placeholder="70" class="input-large" min="30" max="300" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Nivel de actividad</label>
+        <select id="w-actividad" class="input-large">
+          <option value="1.2">Sedentario (poco o nada de ejercicio)</option>
+          <option value="1.375">Ligero (ejercicio 1-3 días/semana)</option>
+          <option value="1.55" selected>Moderado (ejercicio 3-5 días/semana)</option>
+          <option value="1.725">Activo (ejercicio 6-7 días/semana)</option>
+          <option value="1.9">Muy activo (atleta, trabajo físico)</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="wizardNext(1)">← Atrás</button>
+        <button class="btn btn-primary" onclick="wizardNext(3)">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 — GAS URL -->
+    <div class="wizard-step hidden" id="step-3">
+      <h2>Configurar almacenamiento</h2>
+      <p class="step-hint">Pegá la URL del Google Apps Script que desplegaste. Tus datos se guardan en tu propio Google Sheets.</p>
+      <div class="form-group">
+        <label>URL del Apps Script</label>
+        <input type="url" id="w-gas-url" placeholder="https://script.google.com/macros/s/..." class="input-large">
+      </div>
+      <details class="help-details">
+        <summary>¿Cómo obtener la URL?</summary>
+        <ol>
+          <li>Abrí Google Sheets → Extensions → Apps Script</li>
+          <li>Pegá el contenido de <code>Code.gs</code></li>
+          <li>En Script Properties agregá: <code>GEMINI_API_KEY</code></li>
+          <li>Deploy → New deployment → Web app → Anyone → Deploy</li>
+          <li>Copiá la URL y pegala arriba</li>
+        </ol>
+      </details>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="wizardNext(2)">← Atrás</button>
+        <button class="btn btn-primary" onclick="wizardFinish()">Empezar →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div id="main-app" class="hidden">
+
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo-small">🥗</span>
+      <h1 id="page-title">Inicio</h1>
+    </div>
+    <div class="header-right">
+      <span id="fecha-hoy" class="fecha-badge"></span>
+    </div>
+  </header>
+
+  <main id="content"></main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-item" data-page="registro" onclick="navigate('registro')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <span>Registrar</span>
+    </button>
+    <button class="nav-item" data-page="metricas" onclick="navigate('metricas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span>Métricas</span>
+    </button>
+    <button class="nav-item" data-page="progreso" onclick="navigate('progreso')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Progreso</span>
+    </button>
+    <button class="nav-item" data-page="perfil" onclick="navigate('perfil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Perfil</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — Resultado análisis / entrada manual
+═══════════════════════════════════════════ -->
+<div id="food-modal" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="modal-title">Agregar comida</h3>
+      <button class="btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-analysis-result" class="hidden">
+        <div class="analysis-badge" id="modal-confianza"></div>
+        <div class="analysis-photo-preview">
+          <img id="modal-preview-img" src="" alt="">
+        </div>
+      </div>
+      <form id="food-form" onsubmit="submitFood(event)">
+        <div class="form-group">
+          <label>Nombre del plato</label>
+          <input type="text" id="f-nombre" required placeholder="Ej: Pollo con ensalada">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Calorías (kcal)</label>
+            <input type="number" id="f-calorias" required min="0" max="9999" step="1">
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="f-tipo">
+              <option value="desayuno">Desayuno</option>
+              <option value="almuerzo">Almuerzo</option>
+              <option value="merienda">Merienda</option>
+              <option value="cena">Cena</option>
+              <option value="snack">Snack</option>
+            </select>
+          </div>
+        </div>
+        <div class="macros-row">
+          <div class="form-group">
+            <label>Proteínas (g)</label>
+            <input type="number" id="f-proteinas" min="0" step="0.1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Carbos (g)</label>
+            <input type="number" id="f-carbohidratos" min="0" step="0.1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Grasas (g)</label>
+            <input type="number" id="f-grasas" min="0" step="0.1" placeholder="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <input type="text" id="f-notas" placeholder="Ej: porción grande">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Guardar comida</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LOADING + TOAST
+═══════════════════════════════════════════ -->
+<div id="loading" class="loading-overlay hidden">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p id="loading-text">Cargando...</p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
