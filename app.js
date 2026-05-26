@@ -3,8 +3,10 @@
 ══════════════════════════════════════ */
 
 // ── Configuración ─────────────────────
-const GAS_URL_KEY = 'nt_gas_url';
-const PERFIL_KEY  = 'nt_perfil';
+const GAS_URL_KEY     = 'nt_gas_url';
+const PERFIL_KEY      = 'nt_perfil';
+const PIN_KEY         = 'nt_pin_ok';
+const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzbhgl7Nlo7iJvMYZPJ4dJXLSvZZ46ecmiTMQDzRf8I4NF-U9os-RZeqwbZtDsXygbT/exec';
 
 // ── Estado ────────────────────────────
 let state = {
@@ -17,7 +19,7 @@ let state = {
 };
 
 // ── Utilidades ────────────────────────
-function gasUrl() { return localStorage.getItem(GAS_URL_KEY) || ''; }
+function gasUrl() { return localStorage.getItem(GAS_URL_KEY) || GAS_URL_DEFAULT; }
 function perfilLocal() {
   try { return JSON.parse(localStorage.getItem(PERFIL_KEY)) || {}; } catch { return {}; }
 }
@@ -804,14 +806,18 @@ function saveGasUrl() {
 // ══════════════════════════════════════
 // SETUP WIZARD
 // ══════════════════════════════════════
+let wizardPin = '';
+
 function wizardNext(step) {
   document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('hidden'));
   document.getElementById('step-' + step).classList.remove('hidden');
+  if (step === 4) { wizardPin = ''; updatePinDots('w', wizardPin); }
 }
 
-async function wizardFinish() {
+async function wizardFinish(pin) {
   const gasUrlVal = document.getElementById('w-gas-url').value.trim();
-  if (!gasUrlVal) { toast('Ingresá la URL del Apps Script', 'error'); return; }
+  if (!gasUrlVal) { toast('Ingresá la URL del Apps Script', 'error'); wizardNext(3); return; }
+  if (!pin || pin.length !== 4) { toast('PIN debe tener 4 dígitos', 'error'); return; }
 
   const p = {
     nombre:   document.getElementById('w-nombre').value.trim(),
@@ -821,6 +827,7 @@ async function wizardFinish() {
     peso:     document.getElementById('w-peso').value,
     peso_obj: document.getElementById('w-peso-obj').value,
     actividad:document.getElementById('w-actividad').value,
+    pin
   };
 
   const metas = calcMetas(p);
@@ -832,6 +839,7 @@ async function wizardFinish() {
   }
 
   localStorage.setItem(GAS_URL_KEY, gasUrlVal);
+  localStorage.setItem(PIN_KEY, 'ok');
   savePerfilLocal(p);
 
   try {
@@ -842,6 +850,53 @@ async function wizardFinish() {
   } catch(err) {
     hideLoading();
     toast(err.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════
+// PIN — teclado numérico
+// ══════════════════════════════════════
+const pinState = { w: '', v: '' };
+
+function pinKey(ctx, digit) {
+  if (pinState[ctx].length >= 4) return;
+  pinState[ctx] += digit;
+  updatePinDots(ctx, pinState[ctx]);
+  if (pinState[ctx].length === 4) {
+    setTimeout(() => {
+      if (ctx === 'w') {
+        wizardPin = pinState[ctx];
+        wizardFinish(wizardPin);
+      } else {
+        verifyPin(pinState[ctx]);
+      }
+    }, 150);
+  }
+}
+
+function pinDel(ctx) {
+  pinState[ctx] = pinState[ctx].slice(0, -1);
+  updatePinDots(ctx, pinState[ctx]);
+}
+
+function updatePinDots(ctx, val) {
+  const id = ctx === 'w' ? 'w-pin-dots' : 'v-pin-dots';
+  const dots = document.querySelectorAll('#' + id + ' .pin-dot');
+  dots.forEach((d, i) => d.classList.toggle('filled', i < val.length));
+}
+
+function verifyPin(entered) {
+  const perfil = perfilLocal();
+  if (entered === String(perfil.pin)) {
+    localStorage.setItem(PIN_KEY, 'ok');
+    document.getElementById('pin-screen').classList.add('hidden');
+    launchApp();
+  } else {
+    pinState['v'] = '';
+    updatePinDots('v', '');
+    const err = document.getElementById('pin-screen-error');
+    err.classList.remove('hidden');
+    setTimeout(() => err.classList.add('hidden'), 2000);
   }
 }
 
@@ -888,17 +943,36 @@ function launchApp() {
   navigate('dashboard');
 }
 
-function init() {
-  const url    = gasUrl();
-  const perfil = perfilLocal();
-  if (url && perfil.nombre) {
-    launchApp();
-  } else {
+async function init() {
+  const perfil   = perfilLocal();
+  const pinOk    = localStorage.getItem(PIN_KEY) === 'ok';
+
+  // Perfil local + PIN verificado → entrar directo
+  if (perfil.nombre && pinOk) { launchApp(); return; }
+
+  // Sin perfil local → intentar restaurar desde Sheets
+  if (!perfil.nombre) {
+    try {
+      showLoading('Restaurando sesión...');
+      const perfilRemoto = await api('getPerfil');
+      hideLoading();
+      if (perfilRemoto && perfilRemoto.nombre) {
+        savePerfilLocal(perfilRemoto);
+        // Perfil restaurado → pedir PIN
+        document.getElementById('pin-screen').classList.remove('hidden');
+        pinState['v'] = '';
+        return;
+      }
+    } catch(e) { hideLoading(); }
+    // Primera vez real → wizard
     document.getElementById('setup-wizard').classList.remove('hidden');
-    // Pre-rellenar nombre si existe
-    if (perfil.nombre) setValue('w-nombre', perfil.nombre);
-    if (url) setValue('w-gas-url', url);
+    setValue('w-gas-url', gasUrl());
+    return;
   }
+
+  // Perfil local pero PIN no verificado en este dispositivo → pedir PIN
+  document.getElementById('pin-screen').classList.remove('hidden');
+  pinState['v'] = '';
 }
 
 init();

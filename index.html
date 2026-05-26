@@ -96,8 +96,64 @@
       </details>
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="wizardNext(2)">← Atrás</button>
-        <button class="btn btn-primary" onclick="wizardFinish()">Empezar →</button>
+        <button class="btn btn-primary" onclick="wizardNext(4)">Continuar →</button>
       </div>
+    </div>
+
+    <!-- Step 4 — PIN -->
+    <div class="wizard-step hidden" id="step-4">
+      <h2>Elegí un PIN de 4 dígitos</h2>
+      <p class="step-hint">Se te va a pedir cada vez que entrés desde un dispositivo nuevo. En este dispositivo queda recordado.</p>
+      <div class="pin-dots-wrap" id="w-pin-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-keypad" id="w-pin-keypad">
+        <button class="pin-key" onclick="pinKey('w',1)">1</button>
+        <button class="pin-key" onclick="pinKey('w',2)">2</button>
+        <button class="pin-key" onclick="pinKey('w',3)">3</button>
+        <button class="pin-key" onclick="pinKey('w',4)">4</button>
+        <button class="pin-key" onclick="pinKey('w',5)">5</button>
+        <button class="pin-key" onclick="pinKey('w',6)">6</button>
+        <button class="pin-key" onclick="pinKey('w',7)">7</button>
+        <button class="pin-key" onclick="pinKey('w',8)">8</button>
+        <button class="pin-key" onclick="pinKey('w',9)">9</button>
+        <button class="pin-key pin-key-empty"></button>
+        <button class="pin-key" onclick="pinKey('w',0)">0</button>
+        <button class="pin-key pin-key-del" onclick="pinDel('w')">⌫</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="wizardNext(3)">← Atrás</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA PIN (dispositivo nuevo)
+═══════════════════════════════════════════ -->
+<div id="pin-screen" class="hidden">
+  <div class="pin-screen-inner">
+    <div class="pin-screen-logo">🔒</div>
+    <h2>Ingresá tu PIN</h2>
+    <p id="pin-screen-error" class="pin-error hidden">PIN incorrecto, intentá de nuevo</p>
+    <div class="pin-dots-wrap" id="v-pin-dots">
+      <span class="pin-dot"></span><span class="pin-dot"></span>
+      <span class="pin-dot"></span><span class="pin-dot"></span>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('v',1)">1</button>
+      <button class="pin-key" onclick="pinKey('v',2)">2</button>
+      <button class="pin-key" onclick="pinKey('v',3)">3</button>
+      <button class="pin-key" onclick="pinKey('v',4)">4</button>
+      <button class="pin-key" onclick="pinKey('v',5)">5</button>
+      <button class="pin-key" onclick="pinKey('v',6)">6</button>
+      <button class="pin-key" onclick="pinKey('v',7)">7</button>
+      <button class="pin-key" onclick="pinKey('v',8)">8</button>
+      <button class="pin-key" onclick="pinKey('v',9)">9</button>
+      <button class="pin-key pin-key-empty"></button>
+      <button class="pin-key" onclick="pinKey('v',0)">0</button>
+      <button class="pin-key pin-key-del" onclick="pinDel('v')">⌫</button>
     </div>
   </div>
 </div>
